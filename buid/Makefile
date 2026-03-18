@@ -117,24 +117,72 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named main
+# Target rules for targets named TinyIM
 
 # Build rule for target.
-main: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 main
-.PHONY : main
+TinyIM: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 TinyIM
+.PHONY : TinyIM
 
 # fast build rule for target.
-main/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/build
-.PHONY : main/fast
+TinyIM/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/build
+.PHONY : TinyIM/fast
+
+src/Logger.o: src/Logger.cpp.o
+.PHONY : src/Logger.o
+
+# target to build an object file
+src/Logger.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/Logger.cpp.o
+.PHONY : src/Logger.cpp.o
+
+src/Logger.i: src/Logger.cpp.i
+.PHONY : src/Logger.i
+
+# target to preprocess a source file
+src/Logger.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/Logger.cpp.i
+.PHONY : src/Logger.cpp.i
+
+src/Logger.s: src/Logger.cpp.s
+.PHONY : src/Logger.s
+
+# target to generate assembly for a file
+src/Logger.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/Logger.cpp.s
+.PHONY : src/Logger.cpp.s
+
+src/TcpServer.o: src/TcpServer.cpp.o
+.PHONY : src/TcpServer.o
+
+# target to build an object file
+src/TcpServer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/TcpServer.cpp.o
+.PHONY : src/TcpServer.cpp.o
+
+src/TcpServer.i: src/TcpServer.cpp.i
+.PHONY : src/TcpServer.i
+
+# target to preprocess a source file
+src/TcpServer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/TcpServer.cpp.i
+.PHONY : src/TcpServer.cpp.i
+
+src/TcpServer.s: src/TcpServer.cpp.s
+.PHONY : src/TcpServer.s
+
+# target to generate assembly for a file
+src/TcpServer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/TcpServer.cpp.s
+.PHONY : src/TcpServer.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
 # target to build an object file
 src/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/src/main.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/main.cpp.o
 .PHONY : src/main.cpp.o
 
 src/main.i: src/main.cpp.i
@@ -142,7 +190,7 @@ src/main.i: src/main.cpp.i
 
 # target to preprocess a source file
 src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/src/main.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/main.cpp.i
 .PHONY : src/main.cpp.i
 
 src/main.s: src/main.cpp.s
@@ -150,7 +198,7 @@ src/main.s: src/main.cpp.s
 
 # target to generate assembly for a file
 src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/src/main.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
 # Help Target
@@ -161,7 +209,13 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... main"
+	@echo "... TinyIM"
+	@echo "... src/Logger.o"
+	@echo "... src/Logger.i"
+	@echo "... src/Logger.s"
+	@echo "... src/TcpServer.o"
+	@echo "... src/TcpServer.i"
+	@echo "... src/TcpServer.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

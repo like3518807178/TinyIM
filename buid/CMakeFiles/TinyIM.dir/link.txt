@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/TinyIM.dir/src/main.cpp.o CMakeFiles/TinyIM.dir/src/TcpServer.cpp.o CMakeFiles/TinyIM.dir/src/Logger.cpp.o -o TinyIM 
