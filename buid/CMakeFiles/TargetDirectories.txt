@@ -1,0 +1,3 @@
+/home/like/TinyIM/buid/CMakeFiles/main.dir
+/home/like/TinyIM/buid/CMakeFiles/edit_cache.dir
+/home/like/TinyIM/buid/CMakeFiles/rebuild_cache.dir
