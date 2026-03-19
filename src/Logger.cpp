@@ -5,6 +5,12 @@
 #include <iomanip>
 #include <sstream>
 
+std::string Logger::level_ = "INFO";
+
+void Logger::Init(const std::string& level) {
+    level_ = level;
+}
+
 std::string Logger::GetCurrentTime(){
     auto now=std::chrono::system_clock::now();
     std::time_t now_time=std::chrono::system_clock::to_time_t(now);
@@ -18,6 +24,10 @@ std::string Logger::GetCurrentTime(){
 }
 
 void Logger::Info(const std::string& message) {
+    if (level_ == "ERROR") {
+        return;
+    }
+
     std::cout << "[" << GetCurrentTime() << "] "
               << "[INFO] "
               << message << std::endl;

@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/like/TinyIM/src/Config.cpp" "CMakeFiles/TinyIM.dir/src/Config.cpp.o" "gcc" "CMakeFiles/TinyIM.dir/src/Config.cpp.o.d"
   "/home/like/TinyIM/src/Logger.cpp" "CMakeFiles/TinyIM.dir/src/Logger.cpp.o" "gcc" "CMakeFiles/TinyIM.dir/src/Logger.cpp.o.d"
   "/home/like/TinyIM/src/TcpServer.cpp" "CMakeFiles/TinyIM.dir/src/TcpServer.cpp.o" "gcc" "CMakeFiles/TinyIM.dir/src/TcpServer.cpp.o.d"
   "/home/like/TinyIM/src/main.cpp" "CMakeFiles/TinyIM.dir/src/main.cpp.o" "gcc" "CMakeFiles/TinyIM.dir/src/main.cpp.o.d"

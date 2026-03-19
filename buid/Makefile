@@ -129,6 +129,30 @@ TinyIM/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/build
 .PHONY : TinyIM/fast
 
+src/Config.o: src/Config.cpp.o
+.PHONY : src/Config.o
+
+# target to build an object file
+src/Config.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/Config.cpp.o
+.PHONY : src/Config.cpp.o
+
+src/Config.i: src/Config.cpp.i
+.PHONY : src/Config.i
+
+# target to preprocess a source file
+src/Config.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/Config.cpp.i
+.PHONY : src/Config.cpp.i
+
+src/Config.s: src/Config.cpp.s
+.PHONY : src/Config.s
+
+# target to generate assembly for a file
+src/Config.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/TinyIM.dir/build.make CMakeFiles/TinyIM.dir/src/Config.cpp.s
+.PHONY : src/Config.cpp.s
+
 src/Logger.o: src/Logger.cpp.o
 .PHONY : src/Logger.o
 
@@ -210,6 +234,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... TinyIM"
+	@echo "... src/Config.o"
+	@echo "... src/Config.i"
+	@echo "... src/Config.s"
 	@echo "... src/Logger.o"
 	@echo "... src/Logger.i"
 	@echo "... src/Logger.s"

@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/TinyIM.dir/src/Config.cpp.o"
+  "CMakeFiles/TinyIM.dir/src/Config.cpp.o.d"
   "CMakeFiles/TinyIM.dir/src/Logger.cpp.o"
   "CMakeFiles/TinyIM.dir/src/Logger.cpp.o.d"
   "CMakeFiles/TinyIM.dir/src/TcpServer.cpp.o"

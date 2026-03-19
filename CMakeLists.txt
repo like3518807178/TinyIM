@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(TinyIM
     src/main.cpp
+    src/Config.cpp
     src/TcpServer.cpp
     src/Logger.cpp)
 

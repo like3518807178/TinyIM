@@ -94,9 +94,9 @@ void TcpServer::Run(){
             }
 
             std::string client_msg(buffer, n);
-            logger_.Info("recv from client: " + client_msg);
+            logger_.Info("client: " + client_msg);
 
-            std::string reply = "server received: " + client_msg;
+            std::string reply = "server: " + client_msg;
             if (send(conn_fd, reply.c_str(), reply.size(), 0) < 0) {
                 logger_.Error("send() failed");
                 break;
