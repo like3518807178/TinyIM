@@ -29,6 +29,7 @@ bool TcpServer::Start(){
     server_addr.sin_family=AF_INET;
     server_addr.sin_port=htons(port_);
     server_addr.sin_addr.s_addr=INADDR_ANY;
+
     if(bind(listen_fd_,
             reinterpret_cast<sockaddr*>(&server_addr),
             sizeof(server_addr))<0){
@@ -49,40 +50,91 @@ bool TcpServer::Start(){
     return true;
 }
 
-void TcpServer::Run(){
-    if(listen_fd_<0){
+bool TcpServer::SendFrame(int conn_fd,const std::string& payload){
+    std::uint32_t body_len = static_cast<std::uint32_t>(payload.size());
+    std::uint32_t net_len = htonl(body_len);
+
+    std::string frame;
+    frame.resize(kHeaderLen + body_len);
+
+    std::memcpy(&frame[0], &net_len, kHeaderLen);
+    if (body_len > 0) {
+        std::memcpy(&frame[kHeaderLen], payload.data(), body_len);
+    }
+
+    std::size_t total_sent = 0;
+    while (total_sent < frame.size()) {
+        ssize_t n = send(conn_fd,
+                         frame.data() + total_sent,
+                         frame.size() - total_sent,
+                         0);
+        if (n <= 0) {
+            logger_.Error("send() failed");
+            return false;
+        }
+        total_sent += static_cast<std::size_t>(n);
+    }
+
+    return true;
+}
+
+bool TcpServer::TryParseFrame(std::string& input_buffer, std::string& payload) {
+    if (input_buffer.size() < kHeaderLen) {
+        return false;
+    }
+
+    std::uint32_t net_len = 0;
+    std::memcpy(&net_len, input_buffer.data(), kHeaderLen);
+    std::uint32_t body_len = ntohl(net_len);
+
+    if (body_len > kMaxBodyLen) {
+        logger_.Error("frame body too large");
+        input_buffer.clear();
+        return false;
+    }
+
+    if (input_buffer.size() < kHeaderLen + body_len) {
+        return false;
+    }
+
+    payload.assign(input_buffer.data() + kHeaderLen, body_len);
+    input_buffer.erase(0, kHeaderLen + body_len);
+    return true;
+}
+
+
+void TcpServer::Run() {
+    if (listen_fd_ < 0) {
         logger_.Error("Run() failed: listen_fd_ is invalid");
         return;
     }
-    logger_.Info("Server is running...,waiting for connections...");
 
-    while(true){
-        //1.准备client地址
+    logger_.Info("Server is running..., waiting for connections...");
+
+    while (true) {
         sockaddr_in client_addr{};
-        socklen_t client_len=sizeof(client_addr);
+        socklen_t client_len = sizeof(client_addr);
 
-        //2.accept
-        int conn_fd=accept(listen_fd_,
-                           reinterpret_cast<sockaddr*>(&client_addr),
-                           &client_len);
-        if(conn_fd<0){
+        int conn_fd = accept(listen_fd_,
+                             reinterpret_cast<sockaddr*>(&client_addr),
+                             &client_len);
+        if (conn_fd < 0) {
             logger_.Error("Failed to accept connection");
             continue;
         }
 
-        char client_ip[INET_ADDRSTRLEN]={0};
-        inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,sizeof(client_ip));
-        int client_port=ntohs(client_addr.sin_port);
+        char client_ip[INET_ADDRSTRLEN] = {0};
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+        int client_port = ntohs(client_addr.sin_port);
 
         logger_.Info("new client connected: " +
                      std::string(client_ip) + ":" + std::to_string(client_port));
-        
-        char buffer[1024];
 
-        while(true){
-            std::memset(buffer,0,sizeof(buffer));
+        std::string input_buffer;
+        char temp[1024];
 
-            int n=recv(conn_fd,buffer,sizeof(buffer)-1,0);
+        while (true) {
+            int n = recv(conn_fd, temp, sizeof(temp), 0);
             if (n < 0) {
                 logger_.Error("recv() failed");
                 break;
@@ -93,18 +145,47 @@ void TcpServer::Run(){
                 break;
             }
 
-            std::string client_msg(buffer, n);
-            logger_.Info("client: " + client_msg);
+            input_buffer.append(temp, n);
 
-            std::string reply = "server: " + client_msg;
-            if (send(conn_fd, reply.c_str(), reply.size(), 0) < 0) {
-                logger_.Error("send() failed");
+            while (true) {
+                if (input_buffer.size() >= kHeaderLen) {
+                    std::uint32_t net_len = 0;
+                    std::memcpy(&net_len, input_buffer.data(), kHeaderLen);
+                    std::uint32_t body_len = ntohl(net_len);
+                    if (body_len > kMaxBodyLen) {
+                        logger_.Error("invalid frame: body too large");
+                        close(conn_fd);
+                        conn_fd = -1;
+                        break;
+                    }
+                }
+
+                std::string payload;
+                if (!TryParseFrame(input_buffer, payload)) {
+                    break;
+                }
+
+                logger_.Info("frame payload: " + payload);
+
+                std::string reply = "server: " + payload;
+                if (!SendFrame(conn_fd, reply)) {
+                    close(conn_fd);
+                    conn_fd = -1;
+                    break;
+                }
+            }
+
+            if (conn_fd < 0) {
                 break;
             }
         }
-        close(conn_fd);
-    }   
+
+        if (conn_fd >= 0) {
+            close(conn_fd);
+        }
+    }
 }
+
 
 void TcpServer::Stop(){
     if (listen_fd_ >= 0) {
