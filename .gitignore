@@ -1,0 +1,6 @@
+build/
+buid/
+*.o
+*.out
+*.swp
+*.log

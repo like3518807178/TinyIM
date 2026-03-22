@@ -1,26 +1,26 @@
 # TinyIM
 
-TinyIM 是一个基于 Linux + C++17 的即时通讯服务端练习项目。
+TinyIM 是一个基于 Linux + C++17 的即时通讯服务端练习项目，当前重点在于把一个最小可运行的 TCP server 逐步演进成“结构清楚、配置明确、协议可扩展、I/O 语义正确”的小型服务端。
 
-当前阶段已经完成的内容包括：
-- 最小 TCP 服务端拆分为 `TcpServer` 和 `Logger`
-- 服务端循环 `accept()`，客户端断开后服务端不会退出
-- 日志输出带时间戳
-- 支持通过配置文件读取端口和日志级别
-- CMake 使用 target 级 include 管理头文件目录
+当前代码已经覆盖：
+- 配置文件加载：从 `conf/server.conf` 读取端口和日志级别
+- 日志模块：统一输出时间戳与级别
+- 长度前缀协议：使用 4 字节包头切分消息帧
+- 非阻塞 socket：监听 fd 和连接 fd 都设置为非阻塞
+- 连接状态管理：为每个连接维护输入/输出缓冲区
 
-## 目录结构
+## 仓库结构
 
 ```text
 TinyIM/
 ├── CMakeLists.txt
 ├── README.md
+├── .gitignore
 ├── conf/
 │   └── server.conf
 ├── docs/
-│   ├── day01.md
-│   ├── day02.md
-│   └── day03.md
+│   ├── day01.md ~ day06.md
+│   └── decision_log.md
 ├── include/
 │   ├── Config.h
 │   ├── Logger.h
@@ -32,7 +32,18 @@ TinyIM/
     └── main.cpp
 ```
 
-## 构建方式
+说明：
+- `build/` 是本地构建目录，不提交到仓库
+- 历史误拼目录 `buid/` 已清理，不再使用
+- `docs/` 里按天记录开发过程，`decision_log.md` 单独记录关键设计选择
+
+## 环境要求
+
+- Linux
+- CMake 3.10 及以上
+- 支持 C++17 的编译器，例如 `g++`
+
+## 怎么编译
 
 在项目根目录执行：
 
@@ -41,32 +52,39 @@ cmake -S . -B build
 cmake --build build
 ```
 
-构建完成后，可执行文件位于：
+编译成功后，可执行文件位于：
 
 ```text
 build/TinyIM
 ```
 
-## 运行方式
+## 怎么运行
 
-需要从 `build/` 目录启动程序：
+下面两种方式都可以：
+
+```bash
+./build/TinyIM
+```
+
+或
 
 ```bash
 cd build
 ./TinyIM
 ```
 
-原因是当前 `main.cpp` 中读取配置文件的路径为：
+程序会依次尝试读取：
 
-```cpp
+```text
+conf/server.conf
 ../conf/server.conf
 ```
 
-所以如果不在 `build/` 目录下运行，程序可能会找不到配置文件。
+所以无论从项目根目录还是 `build/` 目录启动，都能找到配置文件。
 
 ## 配置文件
 
-配置文件位置：
+配置文件路径：
 
 ```text
 conf/server.conf
@@ -81,46 +99,39 @@ log_level=INFO
 
 支持的配置项：
 - `port`：服务端监听端口
-- `log_level`：日志级别，当前代码中常用值为 `INFO` / `ERROR`
+- `log_level`：日志级别，当前支持 `INFO` / `ERROR`
 
-## 修改端口后启动
+## 运行后的预期输出
 
-如果想改端口，可以直接编辑：
+启动成功后，日志会类似这样：
 
 ```text
-conf/server.conf
+[2026-03-22 10:00:00] [INFO] config loaded from conf/server.conf, port=9999, log_level=INFO
+[2026-03-22 10:00:00] [INFO] Server started on port 9999 (non-blocking)
+[2026-03-22 10:00:00] [INFO] Server is running, waiting for connections...
 ```
 
-例如改成：
-
-```conf
-port=10001
-log_level=INFO
-```
-
-然后重新启动服务端：
+如果想确认进程已经在监听端口，可以执行：
 
 ```bash
-cd build
-./TinyIM
+ss -ltnp | grep 9999
 ```
 
-启动成功后，日志中会看到类似输出：
+## 当前实现到哪一步
 
-```text
-[2026-03-20 19:31:24] [INFO] config loaded, port=10001, log_level=INFO
-[2026-03-20 19:31:24] [INFO] Server started on port 10001
-```
-
-这说明配置文件中的端口已经生效。
-
-## 验收情况
-
-当前已经验证通过的项目行为：
+目前 TinyIM 还处在“网络基础能力打底”阶段，重点不是业务功能，而是先把服务端语义做对：
 - 客户端断开后，服务端不会退出
-- 服务端可以持续监听端口并接受新的连接
-- 连续三次重连后，仍然可以正常收发消息
-- 修改配置文件中的端口后，可以按新端口成功启动
+- 可以连续接受多个连接
+- 可以在单连接内按长度前缀协议拆出完整消息帧
+- 非阻塞读写下，会正确处理 `EAGAIN/EWOULDBLOCK`
+- 写缓冲区未发完时，会保留剩余数据等待下一轮发送
+
+## 已知限制
+
+- 当前主循环还是手写轮询，并通过 `usleep(1000)` 降低空转
+- 还没有引入 `epoll`
+- 还没有正式的自动化测试
+- 现在更适合做网络编程练习，不适合作为生产服务端
 
 ## 调试命令
 
@@ -130,7 +141,7 @@ cd build
 ss -ltnp | grep 9999
 ```
 
-查看端口被哪个进程占用：
+查看端口占用：
 
 ```bash
 lsof -i :9999
@@ -142,7 +153,7 @@ lsof -i :9999
 ps -ef | grep TinyIM
 ```
 
-动态查看系统状态：
+动态观察资源使用：
 
 ```bash
 top
@@ -150,6 +161,10 @@ top
 
 ## 开发记录
 
-- Day 01: [`docs/day01.md`](docs/day01.md)
-- Day 02: [`docs/day02.md`](docs/day02.md)
-- Day 03: [`docs/day03.md`](docs/day03.md)
+- Day 01: `docs/day01.md`
+- Day 02: `docs/day02.md`
+- Day 03: `docs/day03.md`
+- Day 04: `docs/day04.md`
+- Day 05: `docs/day05.md`
+- Day 06: `docs/day06.md`
+- 关键决策：`docs/decision_log.md`

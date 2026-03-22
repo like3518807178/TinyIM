@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 
 class TcpServer{
     public:
@@ -16,8 +17,24 @@ class TcpServer{
 
 
     private:
-        bool SendFrame(int conn_fd, const std::string& payload);
-        bool TryParseFrame(std::string& input_buffer, std::string& payload);
+        struct Connection {
+            std::string peer;
+            std::string input_buffer;
+            std::string output_buffer;
+        };
+
+        enum class ParseResult {
+            kIncomplete,
+            kComplete,
+            kInvalid
+        };
+
+        bool SetNonBlocking(int fd);
+        bool SendFrame(Connection& connection, const std::string& payload);
+        ParseResult TryParseFrame(std::string& input_buffer, std::string& payload);
+        bool HandleRead(int conn_fd, Connection& connection);
+        bool HandleWrite(int conn_fd, Connection& connection);
+        void CloseConnection(int conn_fd);
 
     private:
         static constexpr std::uint32_t kHeaderLen = 4;
@@ -27,5 +44,6 @@ class TcpServer{
         int port_;
         int listen_fd_;
         Logger logger_;
+        std::unordered_map<int, Connection> connections_;
 };
 #endif
