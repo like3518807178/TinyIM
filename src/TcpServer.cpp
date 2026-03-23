@@ -1,4 +1,5 @@
 #include "TcpServer.h"
+#include "EventLoop.h"
 
 #include <unistd.h>
 #include <cerrno>
@@ -10,7 +11,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-TcpServer::TcpServer(int port) : port_(port), listen_fd_(-1) {}
+TcpServer::TcpServer(int port) : port_(port), event_loop_(nullptr) {}
 
 bool TcpServer::SetNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -28,23 +29,22 @@ bool TcpServer::SetNonBlocking(int fd) {
 }
 
 bool TcpServer::Start() {
-    listen_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_fd_ < 0) {
+    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_fd < 0) {
         logger_.Error("Failed to create socket: " + std::string(std::strerror(errno)));
         return false;
     }
+    listen_fd_.Reset(listen_fd);
 
-    if (!SetNonBlocking(listen_fd_)) {
-        close(listen_fd_);
-        listen_fd_ = -1;
+    if (!SetNonBlocking(listen_fd_.Get())) {
+        listen_fd_.Reset();
         return false;
     }
 
     int opt = 1;
-    if (setsockopt(listen_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    if (setsockopt(listen_fd_.Get(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         logger_.Error("Failed to set socket options: " + std::string(std::strerror(errno)));
-        close(listen_fd_);
-        listen_fd_ = -1;
+        listen_fd_.Reset();
         return false;
     }
 
@@ -53,19 +53,21 @@ bool TcpServer::Start() {
     server_addr.sin_port = htons(port_);
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
-    if (bind(listen_fd_,
+    if (bind(listen_fd_.Get(),
              reinterpret_cast<sockaddr*>(&server_addr),
              sizeof(server_addr)) < 0) {
         logger_.Error("Failed to bind socket: " + std::string(std::strerror(errno)));
-        close(listen_fd_);
-        listen_fd_ = -1;
+        listen_fd_.Reset();
         return false;
     }
 
-    if (listen(listen_fd_, 5) < 0) {
+    if (listen(listen_fd_.Get(), 5) < 0) {
         logger_.Error("Failed to listen on socket: " + std::string(std::strerror(errno)));
-        close(listen_fd_);
-        listen_fd_ = -1;
+        listen_fd_.Reset();
+        return false;
+    }
+
+    if (!InitEventLoop()) {
         return false;
     }
 
@@ -191,49 +193,83 @@ void TcpServer::CloseConnection(int conn_fd) {
     close(conn_fd);
 }
 
+bool TcpServer::InitEventLoop() {
+    delete event_loop_;
+    event_loop_ = new EventLoop(logger_);
+
+    if (!event_loop_->Init()) {
+        delete event_loop_;
+        event_loop_ = nullptr;
+        return false;
+    }
+
+    if (!event_loop_->AddReadable(listen_fd_.Get())) {
+        delete event_loop_;
+        event_loop_ = nullptr;
+        return false;
+    }
+
+    logger_.Info("EventLoop initialized: listen fd registered for EPOLLIN");
+    return true;
+}
+
+void TcpServer::AcceptNewConnections() {
+    while (true) {
+        sockaddr_in client_addr{};
+        socklen_t client_len = sizeof(client_addr);
+
+        int conn_fd = accept(listen_fd_.Get(),
+                             reinterpret_cast<sockaddr*>(&client_addr),
+                             &client_len);
+        if (conn_fd < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            }
+
+            logger_.Error("accept() failed: " + std::string(std::strerror(errno)));
+            break;
+        }
+
+        if (!SetNonBlocking(conn_fd)) {
+            close(conn_fd);
+            continue;
+        }
+
+        char client_ip[INET_ADDRSTRLEN] = {0};
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+        int client_port = ntohs(client_addr.sin_port);
+
+        Connection connection;
+        connection.peer = std::string(client_ip) + ":" + std::to_string(client_port);
+        connections_.emplace(conn_fd, std::move(connection));
+
+        logger_.Info("new client connected: fd=" + std::to_string(conn_fd) +
+                     ", peer=" + connections_[conn_fd].peer);
+    }
+}
+
 void TcpServer::Run() {
-    if (listen_fd_ < 0) {
+    if (!listen_fd_.IsValid()) {
         logger_.Error("Run() failed: listen_fd_ is invalid");
+        return;
+    }
+    if (event_loop_ == nullptr) {
+        logger_.Error("Run() failed: event_loop_ is not initialized");
         return;
     }
 
     logger_.Info("Server is running, waiting for connections...");
 
     while (true) {
-        while (true) {
-            sockaddr_in client_addr{};
-            socklen_t client_len = sizeof(client_addr);
-
-            int conn_fd = accept(listen_fd_,
-                                 reinterpret_cast<sockaddr*>(&client_addr),
-                                 &client_len);
-            if (conn_fd < 0) {
-                if (errno == EINTR) {
-                    continue;
-                }
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    break;
-                }
-
-                logger_.Error("accept() failed: " + std::string(std::strerror(errno)));
-                break;
+        std::vector<int> ready_fds = event_loop_->Wait(1);
+        for (int fd : ready_fds) {
+            if (fd == listen_fd_.Get()) {
+                logger_.Info("epoll event: listen fd is readable");
+                AcceptNewConnections();
             }
-
-            if (!SetNonBlocking(conn_fd)) {
-                close(conn_fd);
-                continue;
-            }
-
-            char client_ip[INET_ADDRSTRLEN] = {0};
-            inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-            int client_port = ntohs(client_addr.sin_port);
-
-            Connection connection;
-            connection.peer = std::string(client_ip) + ":" + std::to_string(client_port);
-            connections_.emplace(conn_fd, std::move(connection));
-
-            logger_.Info("new client connected: fd=" + std::to_string(conn_fd) +
-                         ", peer=" + connections_[conn_fd].peer);
         }
 
         for (auto it = connections_.begin(); it != connections_.end();) {
@@ -268,9 +304,13 @@ void TcpServer::Stop() {
     }
     connections_.clear();
 
-    if (listen_fd_ >= 0) {
-        close(listen_fd_);
-        listen_fd_ = -1;
+    if (event_loop_ != nullptr) {
+        delete event_loop_;
+        event_loop_ = nullptr;
+    }
+
+    if (listen_fd_.IsValid()) {
+        listen_fd_.Reset();
         logger_.Info("server stopped");
     }
 }

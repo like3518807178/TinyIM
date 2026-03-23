@@ -2,6 +2,7 @@
 #define TCPSERVER_H
 
 #include "Logger.h"
+#include "ScopedFd.h"
 
 #include <cstdint>
 #include <string>
@@ -34,6 +35,8 @@ class TcpServer{
         ParseResult TryParseFrame(std::string& input_buffer, std::string& payload);
         bool HandleRead(int conn_fd, Connection& connection);
         bool HandleWrite(int conn_fd, Connection& connection);
+        bool InitEventLoop();
+        void AcceptNewConnections();
         void CloseConnection(int conn_fd);
 
     private:
@@ -42,8 +45,9 @@ class TcpServer{
 
 
         int port_;
-        int listen_fd_;
+        ScopedFd listen_fd_;
         Logger logger_;
+        class EventLoop* event_loop_;
         std::unordered_map<int, Connection> connections_;
 };
 #endif
