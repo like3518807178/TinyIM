@@ -166,6 +166,41 @@ ss -ltnp | grep 9999
 - `MYSQL_USER`
 - `MYSQL_PASSWORD`
 
+## 并发测试客户端
+
+仓库内提供了一个最小测试客户端脚本：
+- `scripts/verify_concurrent_protocol.py`
+
+它可以完成下面三件事：
+- 建立多连接并发压测
+- 每个连接批量发包（支持 `--burst` 控制同一连接内的在途请求数）
+- 校验服务端响应里的 `cmd`、`request_id` 和 `body`
+
+先启动服务端：
+
+```bash
+./build/TinyIM
+```
+
+再在另一个终端执行测试：
+
+```bash
+python3 scripts/verify_concurrent_protocol.py --host 127.0.0.1 --port 9999 --clients 20 --requests 20 --burst 5
+```
+
+参数说明：
+- `--clients`：并发连接数
+- `--requests`：每个连接发送多少条请求
+- `--burst`：每个连接允许多少条请求处于“已发送、待收响应”的状态
+
+如果全部通过，脚本会输出每个连接的校验结果，并打印类似下面的汇总：
+
+```text
+SUMMARY: passed=20/20, requests_per_client=20, burst=5
+```
+
+这条命令就是当前仓库复现“并发连接 + 发包 + 校验响应”的推荐验收方式。
+
 ## 调试命令
 
 查看监听端口：
