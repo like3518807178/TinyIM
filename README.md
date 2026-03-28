@@ -137,6 +137,35 @@ ss -ltnp | grep 9999
 - 还没有正式的自动化测试
 - 现在更适合做网络编程练习，不适合作为生产服务端
 
+
+## MySQL 初始化
+
+已经提供可一键初始化的 MySQL 脚手架：
+- `sql/schema.sql`：建库建表脚本
+- `docker-compose.yml`：MySQL 8.4 容器
+- `scripts/init_mysql.sh`：容器模式一键初始化（推荐）
+- `scripts/init_mysql_local.sh`：本地 MySQL 两步初始化
+
+容器一键初始化：
+
+```bash
+./scripts/init_mysql.sh
+```
+
+本地 MySQL 两步初始化：
+
+```bash
+# 第一步：先确保本地 MySQL 已启动
+# 第二步：执行初始化
+./scripts/init_mysql_local.sh
+```
+
+默认 root 密码是 `root123`，如需改动可通过环境变量覆盖：
+- `MYSQL_HOST`
+- `MYSQL_PORT`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+
 ## 调试命令
 
 查看监听端口：
