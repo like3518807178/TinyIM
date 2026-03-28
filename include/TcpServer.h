@@ -10,7 +10,7 @@
 
 class TcpServer{
     public:
-        explicit TcpServer(int port);
+        explicit TcpServer(int port, bool edge_triggered = false);
 
         bool Start();
         void Run();
@@ -44,6 +44,7 @@ class TcpServer{
         bool HandleWrite(int conn_fd, Connection& connection);
         bool InitEventLoop();
         bool UpdateConnectionEvents(int conn_fd, const Connection& connection);
+        std::uint32_t BuildEpollEvents(std::uint32_t base_events) const;
         void AcceptNewConnections();
         void CloseConnection(int conn_fd);
 
@@ -53,6 +54,7 @@ class TcpServer{
 
 
         int port_;
+        bool edge_triggered_;
         ScopedFd listen_fd_;
         Logger logger_;
         class EventLoop* event_loop_;

@@ -3,7 +3,7 @@
 TinyIM 是一个基于 Linux + C++17 的即时通讯服务端练习项目，当前重点在于把一个最小可运行的 TCP server 逐步演进成“结构清楚、配置明确、协议可扩展、I/O 语义正确”的小型服务端。
 
 当前代码已经覆盖：
-- 配置文件加载：从 `conf/server.conf` 读取端口和日志级别
+- 配置文件加载：从 `conf/server.conf` 读取端口、日志级别和 `epoll` 触发模式
 - 日志模块：统一输出时间戳与级别
 - 基础消息协议：使用 `cmd + request_id + body_len + body` 切分消息帧
 - 非阻塞 socket：监听 fd 和连接 fd 都设置为非阻塞
@@ -96,19 +96,21 @@ conf/server.conf
 ```conf
 port=9999
 log_level=INFO
+epoll_trigger_mode=LT
 ```
 
 支持的配置项：
 - `port`：服务端监听端口
 - `log_level`：日志级别，当前支持 `INFO` / `ERROR`
+- `epoll_trigger_mode`：`epoll` 触发模式，支持 `LT` / `ET`，默认 `LT`
 
 ## 运行后的预期输出
 
 启动成功后，日志会类似这样：
 
 ```text
-[2026-03-22 10:00:00] [INFO] config loaded from conf/server.conf, port=9999, log_level=INFO
-[2026-03-22 10:00:00] [INFO] Server started on port 9999 (non-blocking)
+[2026-03-22 10:00:00] [INFO] config loaded from conf/server.conf, port=9999, log_level=INFO, epoll_trigger_mode=LT
+[2026-03-22 10:00:00] [INFO] Server started on port 9999 (non-blocking, trigger_mode=LT)
 [2026-03-22 10:00:00] [INFO] Server is running, waiting for connections...
 ```
 

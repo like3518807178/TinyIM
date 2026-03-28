@@ -26,7 +26,8 @@ void AppendUint32(std::string& buffer, std::uint32_t value) {
 }
 }
 
-TcpServer::TcpServer(int port) : port_(port), event_loop_(nullptr) {}
+TcpServer::TcpServer(int port, bool edge_triggered)
+    : port_(port), edge_triggered_(edge_triggered), event_loop_(nullptr) {}
 
 bool TcpServer::SetNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -86,7 +87,8 @@ bool TcpServer::Start() {
         return false;
     }
 
-    logger_.Info("Server started on port " + std::to_string(port_) + " (non-blocking)");
+    logger_.Info("Server started on port " + std::to_string(port_) +
+                 " (non-blocking, trigger_mode=" + std::string(edge_triggered_ ? "ET" : "LT") + ")");
     return true;
 }
 
@@ -243,13 +245,14 @@ bool TcpServer::InitEventLoop() {
         return false;
     }
 
-    if (!event_loop_->Add(listen_fd_.Get(), EPOLLIN)) {
+    if (!event_loop_->Add(listen_fd_.Get(), BuildEpollEvents(EPOLLIN))) {
         delete event_loop_;
         event_loop_ = nullptr;
         return false;
     }
 
-    logger_.Info("EventLoop initialized: listen fd registered for EPOLLIN");
+    logger_.Info("EventLoop initialized: listen fd registered for EPOLLIN" +
+                 std::string(edge_triggered_ ? "|EPOLLET" : " (LT)"));
     return true;
 }
 
@@ -259,7 +262,14 @@ bool TcpServer::UpdateConnectionEvents(int conn_fd, const Connection& connection
         events |= EPOLLOUT;
     }
 
-    return event_loop_->Modify(conn_fd, events);
+    return event_loop_->Modify(conn_fd, BuildEpollEvents(events));
+}
+
+std::uint32_t TcpServer::BuildEpollEvents(std::uint32_t base_events) const {
+    if (edge_triggered_) {
+        return base_events | EPOLLET;
+    }
+    return base_events;
 }
 
 void TcpServer::AcceptNewConnections() {
@@ -300,7 +310,7 @@ void TcpServer::AcceptNewConnections() {
             continue;
         }
 
-        if (!event_loop_->Add(conn_fd, EPOLLIN | EPOLLRDHUP)) {
+        if (!event_loop_->Add(conn_fd, BuildEpollEvents(EPOLLIN | EPOLLRDHUP))) {
             logger_.Error("failed to register conn fd into epoll: fd=" + std::to_string(conn_fd));
             close(conn_fd);
             connections_.erase(it);
